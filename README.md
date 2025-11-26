@@ -1,6 +1,6 @@
-# DRDCalo WP2: Noble Liquid Calorimeters for Future Colliders
+# ALLEGRO
 
-This repository hosts code and recipes relevant for the DRDCalo work package 2 (Noble Liquid Calorimetry) activities. If you want to know how to update the sampling fractions, re-train the ML based calibration, etc, you are at the right place!
+This repository hosts "expert" code and recipes for the ALLEGRO detector, for instance to rederive calibrations, retrain ML reco algorithms, etc.
 
 ## Set-up
 
