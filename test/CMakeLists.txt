@@ -29,6 +29,11 @@ add_test(NAME HelloWorldAlg
                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                COMMAND k4run k4ProjectTemplate/options/createHelloWorld.py)
 
+add_test(NAME ctest_turbineECalEndcap_calib
+	       WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+               COMMAND test/ctest_turbineECalEndcap_calib.sh)
+	       
+	     
 # For LD_LIBRARY_PATH
 # ${PROJECT_BINARY_DIR}                                         # The files <plugins>.components and <plugins>.confdb are here
 # ${PROJECT_BINARY_DIR}/${PROJECT_NAME}                         # The plugins (.so) are here
