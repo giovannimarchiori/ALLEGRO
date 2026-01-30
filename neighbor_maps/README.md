@@ -13,7 +13,7 @@ To create a global map for the four subdetectors with links among them the synta
 
 `k4run neighbours.py --ecalb --ecalec --hcalb --hcalec --link-calos --link-ecal --link-hcal`
 
-For debugging, i.e. to compare two map files (number of entries and content), the script compareMaps.py in ../utils can be used, with
+For debugging, i.e. to compare two map files (number of entries and content), the script [compareMaps.py](https://github.com/giovannimarchiori/ALLEGRO/blob/main/utils/compareMaps.py) in ../utils can be used, with
 
 `python ../utils/compareMaps.py neighbours <file1.root> <file2.root>`
 
