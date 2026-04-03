@@ -19,8 +19,6 @@ import ROOT
 import itertools
 from datetime import date
 import os, sys
-#from numpy import ones,vstack
-#from numpy.linalg import lstsq
 import numpy as np
 from math import floor
 
@@ -45,16 +43,6 @@ def rescaleaxis(g, scale = 50e-12/1e-9):
 
 # Retrieving a capa dependent function for the noise charge rms in terms of number of electrons: https://indico.cern.ch/event/1066234/contributions/4708987/attachments/2387716/4080914/20220209_Brieuc_Francois_Noble_Liquid_Calorimetry_forFCCee_FCCworkshop2022.pdf#page=7
 
-"""
-points_capa_noise = [(100, 4375), (500, 6750)]
-x_coords, y_coords = zip(*points_capa_noise)
-A = vstack([x_coords, ones(len(x_coords))]).T
-m, c = lstsq(A, y_coords,rcond=-1)[0]
-#print("Line Solution is y = {m}x + {c}".format(m=m, c=c))
-def get_noise_charge_rms(capacitance):
-    return m * capacitance + c # number of electrons
-"""
-
 # Capa-to-noise relation updated to Omega labs' model in December 2025
 
 # Capacitance (x) and ENC (y) points from Aimie Laffitte's plot
@@ -62,7 +50,6 @@ def get_noise_charge_rms(capacitance):
 
 x = np.array([100.2, 199.8, 300, 400.2, 500.4, 600])
 y = np.array([1020, 1254, 1546, 1878, 2239, 2610])
-
 def parabolic_func(x, a, b):
     return np.sqrt(a * x **2 + b)
 
@@ -80,7 +67,6 @@ def get_noise_charge_rms(capacitance):
 # Get the equivalent of 1 MeV energy deposit in a cell (absorber + Lar) in terms of number of electrons in the charge pre-amplifier + shaper
 r_recomb = 0.04
 w_lar = 23.6 # eV needed to create a ion/electron pair
-
 def get_ref_charge(SF, E_dep = 1 * pow(10, 6)): #E_dep en eV, choose 1 MeV
     return E_dep * SF * (1 - r_recomb) / (2 * w_lar) # nA, the factor 2 comes from: Q_tot = I_0 * t_drift * 1/2  (rectangle --> triangle), t_drift cancels out from the formula to get I_0 which has v_drift/d_gap (Ramo Shockley).
                                                      # Assumption: shaping time is similar or bigger to drift time
@@ -105,6 +91,7 @@ capa_filename = "capacitances_perSource_ecalBarrelFCCee_theta_update2025.root"
 if not os.path.exists(capa_filename):
     print("Error: capacitance file does not exist, please run first python create_capacitance_file.py")
     sys.exit(1)
+print("Reading capacitance file", capa_filename)
 fIn = TFile(capa_filename, "r")
 
 output_folder = "noise_capa_ecalbarrel"
