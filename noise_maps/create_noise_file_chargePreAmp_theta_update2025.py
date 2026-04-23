@@ -83,11 +83,8 @@ for SF in SFfcc:
     SF_rounded_forPrint.append(round(SF,2))
 print('SF:', SF_rounded_forPrint)
 
-#output_folder = "noise_capa_" + date.today().strftime("%y%m%d")
-output_folder = "noise_vs_capa_chargePreAmp"
-
 #filename = "ecalBarrelFCCee_"+flagImpedance+"Ohm_"+flagTraces+"_"+str(flagsShieldsWidth)+"shieldWidth"
-capa_filename = "capacitances_perSource_ecalBarrelFCCee_theta_update2025.root"
+capa_filename = "root/capacitances_perSource_ecalBarrelFCCee_theta_update2025.root"
 if not os.path.exists(capa_filename):
     print("Error: capacitance file does not exist, please run first python create_capacitance_file.py")
     sys.exit(1)
@@ -95,7 +92,6 @@ print("Reading capacitance file", capa_filename)
 fIn = TFile(capa_filename, "r")
 
 output_folder = "noise_capa_ecalbarrel"
-# output_folder = "noise_capa_ecalbarrel" + date.today().strftime("%y%m%d")
 if not os.path.isdir(output_folder):
     os.mkdir(output_folder)
 fSaveAll = TFile(os.path.join(output_folder, "capacitances_ecalBarrelFCCee_theta.root"),"RECREATE")
@@ -280,7 +276,7 @@ for h in hCapTotal:
 legend.Draw()
 cCapacitance.Update()
 cCapacitance.Write()
-cCapacitance.Print(os.path.join(output_folder, "cCapacitance.png"))
+cCapacitance.Print(os.path.join(output_folder_plots, "cCapacitance.png"))
 
 #maximumCap = 1200.
 #maximumNoise = 0.04
@@ -309,7 +305,7 @@ for i, h in enumerate(h_elecNoise_fcc):
 legend.Draw()
 cNoise.Update()
 cNoise.Write()
-cNoise.Print(os.path.join(output_folder, "cNoise.png"))
+cNoise.Print(os.path.join(output_folder_plots, "cNoise.png"))
 
 cNoiseWithTrace = TCanvas("cNoiseWithTrace","Electronic noise with trace cap. per cell",800,600)
 cNoiseWithTrace.cd()
@@ -322,7 +318,7 @@ for i, h in enumerate(h_elecNoise_withTraceCap):
 legend.Draw()
 cNoiseWithTrace.Update()
 cNoiseWithTrace.Write()
-cNoiseWithTrace.Print(os.path.join(output_folder, "cNoiseWithTrace.png"))
+cNoiseWithTrace.Print(os.path.join(output_folder_plots, "cNoiseWithTrace.png"))
 
 legendP = TLegend(0.1,0.6,0.43,0.9)
 legendP.SetHeader("Capacitance")
@@ -361,7 +357,7 @@ for i in range (0, nLayers):
     legendP.Draw()
 
 cCapParts.Write()
-cCapParts.Print(os.path.join(output_folder, "cCapParts.png"))
+cCapParts.Print(os.path.join(output_folder_plots, "cCapParts.png"))
 
 #Save final noise plot (to be used in FCCSW)
 fSave.cd()

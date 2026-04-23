@@ -4,18 +4,18 @@
 # execute script with
 # python create_capacitance_file_theta_CERN_PCBv2_fix_capadensities.py
 #
-# Updated from the previous verion by Juska in November 2025
+# Updated from the previous version by Juska in November 2025
 #
-# This is the second updated version where capacitance lenght densities are taken from measurements,
+# This is the second updated version where capacitance length densities are taken from measurements,
 # shields-per-pad count is fixed and (soon) dielectric between signal pad and absorber
 # is taken into account in the detector capacitance calculation
 
 
-from ROOT import TH1F, TF1, TF2, TCanvas, TLegend, TFile, gStyle
-import ROOT
+from ROOT import TH1F, TF1, TF2, TCanvas, TLegend, TFile, gStyle, gROOT
 from math import ceil, sin, cos, log, tan, pi, sqrt, asin, degrees
+import os
 
-ROOT.gROOT.SetBatch(ROOT.kTRUE)
+gROOT.SetBatch(True)
 
 gStyle.SetPadTickY(1)
 
@@ -23,126 +23,80 @@ debug = False
 verbose = True
 
 # Add appendix to filenames for not mixing different versions
-
 apdx = "_update2025"
 
 # output file
-filename = "capacitances_perSource_ecalBarrelFCCee_theta%s.root" % apdx
+if not os.path.isdir("root"):
+    os.mkdir("root")
+filename = "root/capacitances_perSource_ecalBarrelFCCee_theta%s.root" % apdx
+# output folder for plot
+if not os.path.isdir("plots"):
+    os.mkdir("plots")
 
 # layer 2 require special care as it is separated in several cells and that the shield run beneath the etch: cell 2 signal pad top capa: 0.68 + 0.20 = 0.88, cell 2 signal pad bot: 0.56 + 0.21 = 0.77, cell 3: 0.34 + 2.4 = 2.74, cell 4: 1 + 0.25 = 1.25, cell 5: 1.85 + 0.28 = 2.13
 
-# layer containing the strips
-stripLayer = 1 #JP So we start counting from zero here. Let's keep that in mind.
-               # I keep the strips in the "1st" layer as it is still the baseline choice,
-               # and the impact to capacitance map is small
-
-# Dimensions #NOTE JP the below debug prints are before the 2025 update
-
-# ALLEGRO v03, projective cell corners in phi, LAr gap size adjusted to obtain 1536 modules
-# Number of modules read from detector metadata and used in readout class: 1536
-# Number of layers read from detector metadata and used in readout class: 11
-#  Debug: Number of layers: 11 total thickness 40.54
-#  Info: ECAL cryostat: front: rmin (cm) = 214.9 rmax (cm) = 216.28 dz (cm) = 310
-#  Info: ECAL cryostat: back: rmin (cm) = 261.83 rmax (cm) = 272.1 dz (cm) = 310
-#  Info: ECAL cryostat: side: rmin (cm) = 216.28 rmax (cm) = 261.83 dz (cm) = 3.38
-#  Info: ECAL services: front: rmin (cm) = 216.28 rmax (cm) = 216.98 dz (cm) = 306.62
-#  Info: ECAL services: back: rmin (cm) = 258.13 rmax (cm) = 261.83 dz (cm) = 306.62
-#  Info: ECAL bath: material = LAr rmin (cm) =  216.98 rmax (cm) = 258.13 thickness in front of ECal (cm) = 1 thickness behind ECal (cm) = 4
-#  Info: ECAL calorimeter volume rmin (cm) =  217.28 rmax (cm) = 257.83
-#  Info: passive inner material = Lead
-#  and outer material = lArCaloSteel
-#  thickness of inner part at inner radius (cm) =  0.18
-#  thickness of inner part at outer radius (cm) =  0.18
-#  thickness of outer part (cm) =  0.01
-#  thickness of total (cm) =  0.2
-#  rotation angle = 0.875806
-#  Info: number of passive plates = 1536 azim. angle difference =  0.00409062
-#  Info:  distance at inner radius (cm) = 0.888809
-#  distance at outer radius (cm) = 1.05468
-#  Info: readout material = PCB
-#  thickness of readout planes (cm) =  0.12
-#  number of readout layers = 11
-#  Info: thickness of calorimeter (cm) = 40.55
-#  length of passive or readout planes (cm) =  57.3937
-#  Debug: Thickness of layer 0 : 2.33596
-#  Debug: Thickness of layer 1 : 4.75685
-#  Debug: Thickness of layer 2 : 4.89843
-#  Debug: Thickness of layer 3 : 5.04
-#  Debug: Thickness of layer 4 : 5.20989
-#  Debug: Thickness of layer 5 : 5.36562
-#  Debug: Thickness of layer 6 : 5.54966
-#  Debug: Thickness of layer 7 : 5.73371
-#  Debug: Thickness of layer 8 : 5.94607
-#  Debug: Thickness of layer 9 : 6.15843
-#  Debug: Thickness of layer 10 : 6.3991
-#  Info: active material = LAr active layers thickness at inner radius (cm) = 0.249173 thickness at outer radious (cm) = 0.484647 making 94.502 % increase.
-#  Info: active passive initial overlap (before subtraction) (cm) = 0.1 = 50 %
-
 # Detector
-rmin = 2172.8
-Nplanes = 1536
-inclination_degree = 50.18
-angle = inclination_degree / 180. * pi  # inclination angle in radians
-passiveThickness = 2.0  # mm
-activeTotal = 405.5
-inclinedTotal = 573.937
+ecal_active_rmin_mm = 2172.8  # ECAL calorimeter volume rmin (cm) * 10 -> mm
+Nplanes = 1536  # Number of readout planes
+electrode_inclination_deg = 50.18  # rotation angle (degrees)
+angle = electrode_inclination_deg / 180. * pi  # inclination angle in radians
+absorber_thickness_mm = 2.0  # total thickness of absorber (cm) * 10 -> mm
+ecal_active_thickness_mm = 405.5  # ECAL thickness of calorimeter (cm) * 10 -> mm [IN PRINCIPLE NOT NEEDED]
+pcb_thickness_mm = 1.2  # thickness of readout planes (cm) * 10 -> mm
+
+# Segmentation (ECalBarrel_thetamodulemerged.xml)
+total_electrode_length_mm = 573.937  # Total electrode length from calorimeter xml description (cm) * 10 -> mm (equal to sum of readoutLayerParallelLengths) [IN PRINCIPLE NOT NEEDED]
 # careful, this is not really the radial spacing, it is, after dilution, the spacing in the parallel direction --> radial depth spacing will not be constant
 readoutLayerRadialLengths = [1.69, 3.53, 3.69, 3.76, 3.84, 3.99, 4.15, 4.30, 4.45, 4.61, 4.45] # Updated to give real PCBv2 cell lengths
-
-# [1.65, 3.36, 3.46, 3.56, 3.68, 3.79, 3.92, 4.05, 4.20, 4.35, 4.52] #JP These were the values before 2025 update
-
-#JP PCBv2 cell lenghts by Juska: ls = [22, 46, 48, 48, 48, 48, 49, 50, 52, 54, 56, 58, 60, 58] (in mm)
-#Re-calculated with radlen = l*sin(inclination_degree)
+# JP PCBv2 cell lenghts by Juska: ls = [22, 46, 48, 48, 48, 48, 49, 50, 52, 54, 56, 58, 60, 58] (in mm)
+# Re-calculated with radlen = l*sin(inclination_degree)
 # It gives [1.69, 3.53, 3.69, 3.76, 3.84, 3.99, 4.15, 4.30, 4.45, 4.61, 4.45]
 
-numLayers = len(readoutLayerRadialLengths)
-# Segmentation
-deltaTheta = 0.009817477 / 4
-minTheta = 0.58905
-maxTheta = pi - minTheta
-numTheta = int(ceil((maxTheta - minTheta) / deltaTheta))
-nMergedThetaCells = [4]*numLayers
-nMergedThetaCells[stripLayer] = 1
-nMergedModules = [2]*numLayers
+# GM NOT SURE ABOUT THESE CELL LENGTHS... IN XML WE HAVE
+readoutLayerParallelLengths = [23.3596, 47.5685, 48.9843, 50.4000, 52.0989, 53.6562, 55.4966, 57.3371, 59.4607, 61.5843, 63.9910]  # length of each layer along the electrode direction
 
+numLayers = len(readoutLayerParallelLengths)  # Number of longitudinal layers
+grid_size_theta = 0.00245436925  # grid_size_theta
+offset_theta = 0.5902785  # offset_theta                              
+minTheta = offset_theta - grid_size_theta / 2.  # min theta of calorimeter: offset_theta - grid_size_theta/2
+maxTheta = pi - minTheta  # max theta
+numTheta = int(ceil((maxTheta - minTheta) / grid_size_theta))  # number of cells in theta
+# layer containing the strips
+stripLayer = 1  # JP So we start counting from zero here. Let's keep that in mind.
+                # I keep the strips in the "1st" layer as it is still the baseline choice,
+                # and the impact to capacitance map is small
+
+theta_merging = 4  # in mergedCells_Theta, all other positions should be filled with 4
+module_merging = 2  # in mergedModules, all elements should be equal to 2
+nMergedThetaCells = [theta_merging]*numLayers
+nMergedThetaCells[stripLayer] = 1
+nMergedModules = [module_merging]*numLayers
+
+# PCB: traces
 # only one trace for strip layer because 4 cells instead of one. Version where we extract all channels from the back
+# => [0, 1, 5, 6, ..]
 tracesPerLayer = [i for i in range(numLayers)]
 for i in range(stripLayer+1, numLayers):
-    tracesPerLayer[i] += 3 # 4 -> 3 to get it right
+    tracesPerLayer[i] += 3
+    
+# JP restore strip layer trace count to zero - we will route the trace(s) between strips!
+# tracesPerLayer[stripLayer] = 0 #FIXME this screwed up one trick so had to disable. Strip capa becomes correct due to "capa density" set to zero.
 
-#JP orig: traces per layer = [0, 1, 6, 7, 8, 9, 10, 11, 12, 13, 14]
-#JP fixed:
-
-#JP restore strip layer trace count to zero - we will route the trace(s) between strips!
-#tracesPerLayer[stripLayer] = 0 #FIXME this screwed up one trick so had to disable. Strip capa becomes correct due to "capa density" set to zero.
-
-# PCB dimensions [mm] #JP Updated to CERN PCBv2. Old were mainly from Paris PCBv3.
+# PCB dimensions [mm]  # JP Updated to CERN PCBv2. Old were mainly from Paris PCBv3.
 hhv = 0.1
 hs = 0.15
 t = 0.035
-tsh = 0.0175 #JP shields are thinner in PCBv2, needed to add this
+tsh = 0.0175  # JP shields are thinner in PCBv2, needed to add this
 w = 0.09
 ws = 0.180
 hm = 0.3
 pcbThickness = 5 * t + 2 * tsh + 2 * hhv + 2 * hs + 2 * hm  # mm #JP updated also this equation
-                                                                 # Resulting 1.31 mm matches measurement well
-
-if verbose:
-    print("minTheta =", minTheta)
-    print("maxTheta =", maxTheta)
-    print("numTheta =", numTheta)
-    print("Nplanes =", Nplanes)
-    print("rmin = %f mm" % rmin)
-    print("activeTotal = %f mm" % activeTotal)
-    print("readoutLayerRadialLengths (in cm) =", readoutLayerRadialLengths)
-    print("inclination (deg) =", inclination_degree)
-    print("inclinedTotal = %f mm" % inclinedTotal)
-    print("passiveThickness = %f mm" % passiveThickness)
-    print("number of layers =", numLayers)
-    print("merged cells in theta =", nMergedThetaCells)
-    print("merged modules =", nMergedModules)
-    print("traces per layer =", tracesPerLayer)
-    print("pcbThickness: %f mm" % pcbThickness)
+                                                            # Resulting 1.31 mm matches measurement well
+                                                            # GM: 1.2 in simulation?
+# make sure that the total thickness matches that in the simulation
+if (abs(pcbThickness - pcb_thickness_mm)>1e-6):
+    print(f"WARNING: calculated pcb thickness ({pcbThickness} mm) differs from value in simulation ({pcb_thickness_mm} mm)!!!\n")
+    # exit(0)
 
 # constants:
 # distance from signal trace to shield (HS) - from impedance vs. trace width vs. distance to ground layer 2D plot (Z = 50 Ohm)
@@ -151,29 +105,26 @@ if verbose:
 # distance from shield to the edge of PCB
 # http://www.analog.com/media/en/training-seminars/design-handbooks/Basic-Linear-Design/Chapter12.pdf, page 40
 # signal trace
-epsilonR = 4.8  #JP in CERN PCBs we have actually 4.8, not 4.4
+epsilonR = 4.8  # JP in CERN PCBs we have actually 4.8, not 4.4
 # conversion factor: 1 inch = 25.4 mm
 inch2mm = 25.4
 
 # capa per length from maxwel1 (pF/mm) OBSOLETE
 # strip layer has smaller capacitance due to traces running beneath the anti-etch
-capa_per_mm = [0.1149*2] * numLayers #JP Updated to value measured from PCBv2 T3 cell 14
-                                     #JP I also double these values as these are not doubled later on as should
-                                     # (because we have two signal-pad-plus-shields layers in one cell)
-#JP I don't know if the "traces running beneath anti-etch" effect makes sense
+capa_per_mm = [0.1149*2] * numLayers  # JP Updated to value measured from PCBv2 T3 cell 14
+                                      # JP I also double these values as these are not doubled later on as should
+                                      # (because we have two signal-pad-plus-shields layers in one cell)
+# JP I don't know if the "traces running beneath anti-etch" effect makes sense
 # I put it to zero. There's zero shields running under signal pads of strips, except for
 # one in the case of logical trace ordering, but we won't do that.
 
-capa_per_mm[stripLayer] = 0# 0.0575*2 #JP See justification above
+capa_per_mm[stripLayer] = 0  # 0.0575*2  # JP See justification above
 
-stripLineCapaDensity = 0.1868 # Measured from PCBv2 T3 cell 1
-
-if verbose:
-    print("capa_per_mm (pF/mm) = " , capa_per_mm)
+stripLineCapaDensity = 0.1868  # Measured from PCBv2 T3 cell 1
 
 # multiplicative factors
 # for the trace, factor 2 because we have two HV plate / absorber capa per cell
-nmultTrace = 2 #FIXME JP I already doubled the capa density but still now get a correct value. To be understood.
+nmultTrace = 2  #FIXME JP I already doubled the capa density but still now get a correct value. To be understood.
 # for the shield, where we use maxwell, the extra factor 2 (two signal pad / shield capa) is already accounted for
 nmultShield = 1
 # dielectric constants
@@ -181,26 +132,49 @@ epsilonRLAr = 1.5  # LAr at 88 K #TODO Double-check from Martin's ATLAS source
 epsilon0 = 8.854 / 1000.  # pF/mm
 
 
+# BEGINNING OF THE CALCULATION
+rmin = ecal_active_rmin_mm
+activeTotal = ecal_active_thickness_mm
+passiveThickness = absorber_thickness_mm
+deltaTheta = grid_size_theta
+inclinedTotal = total_electrode_length_mm
+if verbose:
+    print("Parameters used in the calculation:")
+    print("-----------------------------------")
+    print("min theta =", minTheta)
+    print("max theta =", maxTheta)
+    print("delta theta =", grid_size_theta)
+    print("num theta =", numTheta)
+    print("number of planes =", Nplanes)
+    print("r min = %f mm" % rmin)
+    print("active total = %f mm" % activeTotal)
+    print("readout layer radial lengths (in cm) =", readoutLayerRadialLengths)
+    print("electronde inclination (deg) =", electrode_inclination_deg)
+    print("electrode total length = %f mm" % inclinedTotal)
+    print("passive thickness = %f mm" % passiveThickness)
+    print("number of layers =", numLayers)
+    print("merged cells in theta =", nMergedThetaCells)
+    print("merged modules =", nMergedModules)
+    print("traces per layer =", tracesPerLayer)
+    print("pcb thickness: %f mm" % pcbThickness)
+    print("capa per mm (pF/mm) = " , capa_per_mm)
+    print("")
+
 # Fill the layer length, trace length, etc
 readoutLayerParallelLengths = []
 real_radial_separation = [rmin]
 real_radial_depth = []
 inclinations_wrt_radial_dir_at_middleRadialDepth = []
 trace_length = []
-numLayers = len(readoutLayerRadialLengths)
-
-
-dilution_factor = inclinedTotal / activeTotal # Dilution factor takes care of capa decrease due to gap widening (right?)
+dilution_factor = inclinedTotal / activeTotal  # Dilution factor takes care of capa decrease due to gap widening (right?)
 trace_length_inner = 0
 trace_length_outer = 0
-
 outer = False
 current_electrode_length = 0
 
 for idx in range(numLayers):  # first pass to get all length parallel to the readout, real radial separation, inclination at the middle of the layer
 
-    readoutLayerRadialLengths[idx] *= 10 # change from cm to mm
-
+    readoutLayerRadialLengths[idx] *= 10 # change from cm to mm    
     parallel_length = readoutLayerRadialLengths[idx] * dilution_factor
 
     # Tricky point: in the xml geo, you define 'radial'segmentation, but these depths will be the one parallel to the plates after scaling by the dilution factor --> even when setting constant radial depth, the geometry builder will make constant parallel length step, not constant radial steps
@@ -234,8 +208,8 @@ for idx in range(numLayers):
     else:
         trace_length.append(trace_length_inner)
         trace_length_inner += readoutLayerParallelLengths[idx]
-
-#JP The signal trace lengths are now the wrong way around in the array.
+        
+# JP The signal trace lengths are now the wrong way around in the array.
 # (this did not have impact when transferline capa was neglected)
 # Let's invert it and it should be fine for the capacitance calculation.
 trace_length.reverse()
@@ -273,7 +247,7 @@ hCapShield = []
 hCapDetector = []
 line_color_number = 1
 line_style_number = 1
-for i in range(0, len(readoutLayerRadialLengths)):
+for i in range(0, numLayers):
     if line_color_number == 8:
         line_color_number = 22
     if line_style_number == 8:
@@ -338,7 +312,7 @@ for i in range(0, len(readoutLayerParallelLengths)):
         # analytical formula
         #capacitanceTrace = nmultTrace * 1 / inch2mm * 1.41 * epsilonR / logStripline * traceLength
 
-        #JP calculate with value from measurement instead; analytical formula has assumptions that are not fulfilled
+        # JP calculate with value from measurement instead; analytical formula has assumptions that are not fulfilled
         capacitanceTrace = nmultTrace*stripLineCapaDensity*traceLength
 
         hCapTrace[i].SetBinContent(index + 1, capacitanceTrace)
@@ -372,8 +346,8 @@ for i in range(0, len(readoutLayerParallelLengths)):
         distance += t  # the capa is between signal plate and absorber --> need to add distance between HV plate and signal pad
         if (abs(theta - pi / 2.) < 1e-4):
             print("LAr gap size (perpendicular) + hhv + t: %f mm" % distance)
-        #capacitanceDetector = nMergedModules[i] * nMergedThetaCells[i] * 2 * epsilon0 * epsilonRLAr * area / distance  # factor 2 is because there are 2 LAr gaps for each cell
-        #JP Updated to include the effect of 100um dielectric layer
+        # capacitanceDetector = nMergedModules[i] * nMergedThetaCells[i] * 2 * epsilon0 * epsilonRLAr * area / distance  # factor 2 is because there are 2 LAr gaps for each cell
+        # JP Updated to include the effect of 100um dielectric layer
         capacitanceDetector = ( nMergedModules[i] * nMergedThetaCells[i] * 2 * epsilon0 * epsilonRLAr * epsilonR * area ) / ( (distance-hhv)*epsilonR + hhv*epsilonRLAr )
         # (this is the equation for the two-dielectric sandwitch capacitors, equivalent to two capacitors in series)
 
@@ -427,23 +401,22 @@ cTrace.cd()
 legend.Draw()
 cTrace.Update()
 cTrace.Write()
-cTrace.Print("capa_trace%s.png" % apdx)
-cTrace.Print("capa_trace%s.pdf" % apdx)
+cTrace.Print("plots/capa_trace%s.png" % apdx)
+cTrace.Print("plots/capa_trace%s.pdf" % apdx)
 cShield.cd()
 legend.Draw()
 cShield.Update()
 cShield.Write()
-cShield.Print("capa_shield%s.png" % apdx)
-cShield.Print("capa_shield%s.pdf" % apdx)
+cShield.Print("plots/capa_shield%s.png" % apdx)
+cShield.Print("plots/capa_shield%s.pdf" % apdx)
 cDetector.cd()
 legend.Draw()
 cDetector.Update()
 cDetector.Write()
-cDetector.Print("capa_detector%s.png" % apdx)
-cDetector.Print("capa_detector%s.pdf" % apdx)
+cDetector.Print("plots/capa_detector%s.png" % apdx)
+cDetector.Print("plots/capa_detector%s.pdf" % apdx)
 
 fImpedance.Write()
 fImpedance1D.Write()
 
 #closeInput = raw_input("Press ENTER to exit")
-
