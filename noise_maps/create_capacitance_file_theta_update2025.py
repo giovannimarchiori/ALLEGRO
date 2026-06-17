@@ -57,7 +57,7 @@ readoutLayerParallelLengths = [23.3596, 47.5685, 48.9843, 50.4000, 52.0989, 53.6
 
 numLayers = len(readoutLayerParallelLengths)  # Number of longitudinal layers
 grid_size_theta = 0.00245436925  # grid_size_theta
-offset_theta = 0.5902785  # offset_theta                              
+offset_theta = 0.5902785  # offset_theta
 minTheta = offset_theta - grid_size_theta / 2.  # min theta of calorimeter: offset_theta - grid_size_theta/2
 maxTheta = pi - minTheta  # max theta
 numTheta = int(ceil((maxTheta - minTheta) / grid_size_theta))  # number of cells in theta
@@ -78,7 +78,7 @@ nMergedModules = [module_merging]*numLayers
 tracesPerLayer = [i for i in range(numLayers)]
 for i in range(stripLayer+1, numLayers):
     tracesPerLayer[i] += 3
-    
+
 # JP restore strip layer trace count to zero - we will route the trace(s) between strips!
 # tracesPerLayer[stripLayer] = 0 #FIXME this screwed up one trick so had to disable. Strip capa becomes correct due to "capa density" set to zero.
 
@@ -174,7 +174,7 @@ current_electrode_length = 0
 
 for idx in range(numLayers):  # first pass to get all length parallel to the readout, real radial separation, inclination at the middle of the layer
 
-    readoutLayerRadialLengths[idx] *= 10 # change from cm to mm    
+    readoutLayerRadialLengths[idx] *= 10 # change from cm to mm
     parallel_length = readoutLayerRadialLengths[idx] * dilution_factor
 
     # Tricky point: in the xml geo, you define 'radial'segmentation, but these depths will be the one parallel to the plates after scaling by the dilution factor --> even when setting constant radial depth, the geometry builder will make constant parallel length step, not constant radial steps
@@ -208,7 +208,7 @@ for idx in range(numLayers):
     else:
         trace_length.append(trace_length_inner)
         trace_length_inner += readoutLayerParallelLengths[idx]
-        
+
 # JP The signal trace lengths are now the wrong way around in the array.
 # (this did not have impact when transferline capa was neglected)
 # Let's invert it and it should be fine for the capacitance calculation.
