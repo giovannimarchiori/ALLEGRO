@@ -92,6 +92,7 @@ print("Reading capacitance file", capa_filename)
 fIn = TFile(capa_filename, "r")
 
 output_folder = "noise_capa_ecalbarrel"
+output_folder_plots = "plots"
 if not os.path.isdir(output_folder):
     os.mkdir(output_folder)
 fSaveAll = TFile(os.path.join(output_folder, "capacitances_ecalBarrelFCCee_theta.root"),"RECREATE")
